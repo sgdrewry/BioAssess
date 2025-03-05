@@ -1,0 +1,24 @@
+Type: Package
+Package: bioassess
+Title: What the Package Does (One Line, Title Case)
+Version: 0.1.0
+Authors@R:
+    person(given="Samantha", family="Drewry", email="drewrysamantha@yahoo.com", role = c("aut", "cre"))
+Description: What the package does (one paragraph).
+License: GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 3.5.0)
+Imports:
+  dplyr,
+  rgbif,
+  tidyr,
+  CoordinateCleaner
+Suggests:
+    knitr,
+    rmarkdown
+VignetteBuilder:
+ knitr
+SystemRequirements: GDAL (>= 2.0.1)
