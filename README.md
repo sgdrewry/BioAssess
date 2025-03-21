@@ -6,4 +6,32 @@ This package extends the functionality of the rgbif R package, which provides ac
 
 The first step in using this package is to define the location for your biodiversity assessment. Visit geojson.io, select a polygon shape, and create your desired polygon. Once the polygon is created, save it as a WKT by clicking 'Save' in the top left corner and selecting 'WKT'. This will download your polygon's WKT file.
 
-rgbif can next be used to download the GBIF data present within this polygon based on desired parameters, such as date. 
+Next, you can use the rgbif package to download GBIF data within your defined polygon. This is done using the functions occ_download, occ_download_wait, occ_download_get, and occ_download_import. A GBIF account is required to access these functions; you can create one at https://gbif.org/. Once your account is set up, you can run the following code:
+
+polygon <- "(your download WKT)" 
+
+key <- occ_download(
+  pred_in("hasGeospatialIssue", "FALSE"),
+  pred_in("occurrenceStatus", "PRESENT"),
+  pred_in("hasCoordinate", "TRUE"),
+  pred_within(polygon),
+  pred_gte("year", 2008),  # Filter for years greater than or equal to 2008
+  pred_lte("year", 2024),  # Filter for years less than or equal to 2024
+  format = "DWCA",
+  user = "username",       # Username for GBIF
+  pwd = "password",        # Password for GBIF
+  email = "email"         # Email for GBIF
+)
+
+There are other presets available for occ_download, depening on the filters the user wishes to impose on the data. For the purposes of this package, we recommend the arguments specified above. 
+
+meta <- occ_download_wait(key, status_ping = 5, curlopts = list(), quiet = FALSE)
+meta_get <- occ_download_get(key)
+meta_data <- occ_download_import(meta_get)
+
+There are certain columns that are necessary for BioAssess's functions. We will select those columns from the meta data.
+
+Data <- meta_data %>% select(scientificName, decimalLatitude, decimalLongitude, issue, basisOfRecord, individualCount, kingdom, phylum, order, family, genus, species, verbatimScientificName, taxonRank, year, month, day, license, class, collectionCode, institutionCode, countryCode, gbifID, coordinateUncertaintyInMeters, datasetKey)
+
+
+
