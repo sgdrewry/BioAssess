@@ -1,10 +1,10 @@
 Type: Package
-Package: bioassess
-Title: What the Package Does (One Line, Title Case)
+Package: BioAssess
+Title: Biodiversity Assessments
 Version: 0.1.0
 Authors@R:
     person(given="Samantha", family="Drewry", email="drewrysamantha@yahoo.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: This package assesses biodiversity for an input location.
 License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
