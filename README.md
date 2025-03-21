@@ -8,6 +8,7 @@ The first step in using this package is to define the location for your biodiver
 
 Next, you can use the rgbif package to download GBIF data within your defined polygon. This is done using the functions occ_download, occ_download_wait, occ_download_get, and occ_download_import. A GBIF account is required to access these functions; you can create one at https://gbif.org/. Once your account is set up, you can run the following code:
 
+
 polygon <- "(your download WKT)" 
 
 key <- occ_download(
@@ -29,9 +30,11 @@ meta <- occ_download_wait(key, status_ping = 5, curlopts = list(), quiet = FALSE
 meta_get <- occ_download_get(key)
 meta_data <- occ_download_import(meta_get)
 
+
 There are certain columns that are necessary for BioAssess's functions. We will select those columns from the meta data.
 
 Data <- meta_data %>% select(scientificName, decimalLatitude, decimalLongitude, issue, basisOfRecord, individualCount, kingdom, phylum, order, family, genus, species, verbatimScientificName, taxonRank, year, month, day, license, class, collectionCode, institutionCode, countryCode, gbifID, coordinateUncertaintyInMeters, datasetKey)
 
+Now, we can assess biodiversity using BioAssess.
 
 
