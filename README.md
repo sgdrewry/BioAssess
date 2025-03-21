@@ -37,6 +37,15 @@ Data <- meta_data %>% select(scientificName, decimalLatitude, decimalLongitude, 
 
 
 
-Now, we can assess biodiversity using BioAssess.
+Now, we can assess biodiversity using the BioAssess package.
 
+We need to filter the data to ensure all species including in the polygon are accurate. For this, we will use the function filter_biodiversitydata. This function combines CoordinateCleaner's clean_coordinates function with some additional filtering options.
+
+
+
+
+
+
+
+We will generate an information sheet for the polygon, which will include details about all species found within the defined area.
 
