@@ -3,10 +3,10 @@ Package: BioAssess
 Title: Biodiversity Assessments
 Version: 0.1.0
 Authors@R:
-    person(given="Samantha", family="Drewry", email="drewrysamantha@yahoo.com", role = c("aut", "cre")),
+    c(person(given="Samantha", family="Drewry", email="drewrysamantha@yahoo.com", role = c("aut", "cre")),
     person(given="Jennifer", family="Mandel", email="jmandel@memphis.edu", role = c("aut")),
     person(given="Shawn", family="Brown", email="spbrown2@memphis.edu", role = c("aut")),
-    person(given="Jonah", family="Reese", email="jareese4@asu.edu", role = c("aut"))
+    person(given="Jonah", family="Reese", email="jareese4@asu.edu", role = c("aut")))
 Description: This package comprehensively assesses biodiversity for a desired location. This assessment provides a comprehensive outlook on biodiversity and associated risks, which will support the identification of areas to minimize risks to biodiversity and leverage opportunities to support biodiversity.
 License: GPL-3
 Encoding: UTF-8
