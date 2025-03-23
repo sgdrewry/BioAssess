@@ -75,3 +75,5 @@ Really, the only arguments needed are longitude, latitude, and name. The other a
 # inside_protected_area = ? 
 
 
+Once all biodiversity instiutions found in the polygon have been added to the institutions dataframe, we can now filter the GBIF data with the function filter_biodiversitydata. This function incorporates the filtering that the CoordinateCleaner's function clean_coordinates does, with additional functionality that filters based on coordinate uncertainity and basis of records. See filter_biodiversitydata's documentation for further information.
+
