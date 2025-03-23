@@ -46,10 +46,32 @@ We need to filter the data to ensure all species including in the polygon are ac
 
 
 
-
-
 We will generate an information sheet for the polygon, which will include details about all species found within the defined area.
 
-The function clean_coordaintes from CoordinateCleaner can filter biodiversity data from GBIF based on their coordinates. This function focuses on removing potentially erronously georeferenced data, such as coordiantes close to country centroids, capitals, and biodiversity institutions. Biodiversity institutions (zoos, botanic gardens, etc) can inaccurately inflat a polyon's biodiversity. Thus, CoordinateCleaner offers an option to remove any observations within a specified range of these institutions. The package has a dataframe, "institutions", that lists many of these biodiversity institutions. We have found that, on a smaller scale that we are interested in, there are institutions that are missing from the list. We have created a function that allows users to add institutions to CoordinateCleaner's dataframe "institutions".
+The function clean_coordinates from CoordinateCleaner can filter biodiversity data from GBIF based on their coordinates. This function focuses on removing potentially erronously georeferenced data, such as coordiantes close to country centroids, capitals, and biodiversity institutions. Biodiversity institutions (zoos, botanic gardens, etc) can inaccurately inflat a polyon's biodiversity. Thus, CoordinateCleaner offers an option to remove any observations within a specified range of these institutions. The package has a dataframe, "institutions", that lists many of these biodiversity institutions. We have found that, on a smaller scale that we are interested in, there are institutions that are missing from the list. We have created a function that allows users to add institutions to CoordinateCleaner's dataframe "institutions".
+
+install.packages("CoordinateCleaner")
+library("CoordinateCleaner")
+data("institutions")
+
+# Remove any institutions without coordinates
+institutions <- institutions %>% drop_na(decimalLongitude)
+
+add_biodiversity_institution(name, longitude, latitude, city, country, address, source, institution_type, geocoding_precision, geocoding_issue, geocoding_source, inside_protected_area) 
+
+Really, the only arguments needed are longitude, latitude, and name. The other arguments are to keep things organized.
+
+# name = (character) Name of the biodiversity institution
+# longitude = (numeric) Longitude of the center of the institution
+# latitude = (numeric) Longitude of the center of the institution
+# city = (character) City the institution is found in
+# country = (character) Country the institution is found in
+# address = (character) Address of the institution
+# source = ?
+# institution_type = (character) Institution type. Ex: zoo, herbarium, botanic garden
+# geocoding_precision = ?
+# geocoding_issue = ?
+# geocoding_source = ?
+# inside_protected_area = ? 
 
 
