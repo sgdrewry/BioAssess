@@ -54,26 +54,41 @@ install.packages("CoordinateCleaner")
 library("CoordinateCleaner")
 data("institutions")
 
-# Remove any institutions without coordinates
+Remove any institutions without coordinates
 institutions <- institutions %>% drop_na(decimalLongitude)
 
 add_biodiversity_institution(name, longitude, latitude, city, country, address, source, institution_type, geocoding_precision, geocoding_issue, geocoding_source, inside_protected_area) 
 
 Really, the only arguments needed are longitude, latitude, and name. The other arguments are to keep things organized.
 
-# name = (character) Name of the biodiversity institution
-# longitude = (numeric) Longitude of the center of the institution
-# latitude = (numeric) Longitude of the center of the institution
-# city = (character) City the institution is found in
-# country = (character) Country the institution is found in
-# address = (character) Address of the institution
-# source = ?
-# institution_type = (character) Institution type. Ex: zoo, herbarium, botanic garden
-# geocoding_precision = ?
-# geocoding_issue = ?
-# geocoding_source = ?
-# inside_protected_area = ? 
+name = (character) Name of the biodiversity institution
+longitude = (numeric) Longitude of the center of the institution
+latitude = (numeric) Longitude of the center of the institution
+city = (character) City the institution is found in
+country = (character) Country the institution is found in
+address = (character) Address of the institution
+source = ?
+institution_type = (character) Institution type. Ex: zoo, herbarium, botanic garden
+geocoding_precision = ?
+geocoding_issue = ?
+geocoding_source = ?
+inside_protected_area = ? 
 
 
 Once all biodiversity instiutions found in the polygon have been added to the institutions dataframe, we can now filter the GBIF data with the function filter_biodiversitydata. This function incorporates the filtering that the CoordinateCleaner's function clean_coordinates does, with additional functionality that filters based on coordinate uncertainity and basis of records. See filter_biodiversitydata's documentation for further information.
 
+The output of filter_biodiversitydata is two lists, one containing the filtered data and one containing the flagged data. 
+
+As an example of calling the function with data:
+result <- filter_biodiversitydata(data = Data, tests = c("capitals", "centroids", "equal", "institutions", "zeros"), inst_ref = institutions)
+
+Access the filtered data
+metadata_filtered_data <- result$filtered_data
+
+Access the flagged data
+metadata_flagged_data <- result$flagged_data
+
+The function generatinginfosheet takes this filtered data and creates an information sheet for the polygon containing all of the biodiversity data. This function outputs a dataframe with the species present in the polygon. The dataframe includes whether the species is consideed invasive in the location specified, according to the Global Database of Invasive Species and the USGS Nonindigenous Aquatic Species database. The information is location-specific, so the user needs to specific which state(s) their polygon exists in (up to four states). The dataframe will also including information about endangerment statuses for the species, according to the ICUN and NatureServe. Because statuses depend heavily on location, the information sheet will have an ICUN status, a NatureServe global status, and NatureServe state-specific status(es). See the documentation for generatinginfosheet for further information.
+
+
+Because each species on the information sheet will have more than one endangerment status, the function comparingstatuses was created to help the user pick a "final" status for each species. There are two options for comparison of endangerment statuses, "least concern" and "most concern". If "most concern" is chosen, a column will be added to the information sheet which outputs the endangerment status of most concern for each species to be used as their "final" status. If "least concern" is chosen, this column will output the status that is of least concern for each species. See the documentation for comparingstatuses for further information.
