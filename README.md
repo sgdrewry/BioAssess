@@ -47,5 +47,6 @@ We need to filter the data to ensure all species including in the polygon are ac
 
 
 
+
 We will generate an information sheet for the polygon, which will include details about all species found within the defined area.
 
