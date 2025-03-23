@@ -50,3 +50,6 @@ We need to filter the data to ensure all species including in the polygon are ac
 
 We will generate an information sheet for the polygon, which will include details about all species found within the defined area.
 
+The function clean_coordaintes from CoordinateCleaner can filter biodiversity data from GBIF based on their coordinates. This function focuses on removing potentially erronously georeferenced data, such as coordiantes close to country centroids, capitals, and biodiversity institutions. Biodiversity institutions (zoos, botanic gardens, etc) can inaccurately inflat a polyon's biodiversity. Thus, CoordinateCleaner offers an option to remove any observations within a specified range of these institutions. The package has a dataframe, "institutions", that lists many of these biodiversity institutions. We have found that, on a smaller scale that we are interested in, there are institutions that are missing from the list. We have created a function that allows users to add institutions to CoordinateCleaner's dataframe "institutions".
+
+
