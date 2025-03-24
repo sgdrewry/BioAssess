@@ -19,6 +19,7 @@ Imports:
   rgbif,
   tidyr,
   CoordinateCleaner
+  Rcpp
 Suggests:
     knitr,
     rmarkdown
