@@ -9,6 +9,8 @@ The first step in using this package is to define the location for your biodiver
 Next, you can use the rgbif package to download GBIF data within your defined polygon. This is done using the functions occ_download, occ_download_wait, occ_download_get, and occ_download_import. A GBIF account is required to access these functions; you can create one at https://gbif.org/. Once your account is set up, you can run the following code:
 
 
+install.packages("rgbif")
+library("rgbif")
 
 polygon <- "(your download WKT)" 
 
