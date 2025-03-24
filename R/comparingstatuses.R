@@ -47,84 +47,90 @@ comparingstatuses <- function(data, state1 = NULL, state2 = NULL, state3 = NULL,
       data$Final_status <- NA
       
       # Loop through each row
-      for (i in 1:nrow(data)) {
-        # Extract the statuses for the current row
-        state1NatureServeStatus <- as.character(data[i, 3])
-        GlobalNatureServeStatus <- as.character(data[i, 4])
-        ICUNStatus <- as.character(data[i, 5])
-        
-        # Map statuses to numeric values using their respective level systems
-        numeric_values <- c(
-          ifelse(is.na(state1NatureServeStatus), Inf, match(state1NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(GlobalNatureServeStatus), Inf, match(GlobalNatureServeStatus, NatureServe_globallevels)),
-          ifelse(is.na(ICUNStatus), Inf, match(ICUNStatus, ICUNlevels))
-        )
-        
-        # Find the minimum numeric value
-        min_value <- min(numeric_values, na.rm = TRUE)
-        
-        # Assign the corresponding status or NA if all are Inf
-        if (min_value == Inf) {
-          data$Final_status[i] <- NA
-        } else {
-          # Determine which level system the minimum value belongs to
-          if (min_value %in% match(state1NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(GlobalNatureServeStatus, NatureServe_globallevels)) {
-            data$Final_status[i] <- NatureServe_globallevels[min_value]
-          } else if (min_value %in% match(ICUNStatus, ICUNlevels)) {
-            data$Final_status[i] <- ICUNlevels[min_value]
+      cppFunction('
+        NumericVector final_status(Dataframe data, CharacterVector NatureServe_statelevels, CharacterVector NatureServe_globallevels, CharacterVector ICUNlevels) {
+          for (int i = 0; i < data.nrow(); i++) {
+            // Extract the statuses for the current row
+            std::string state1NatureServeStatus = as<std::string>(data(i, 2));
+            std::string GlobalNatureServeStatus = as<std::string>(data(i, 3));
+            std::string ICUNStatus = as<std::string>(data(i, 4));
+            
+            // Map statuses to numeric values using their respective level systems
+            std::vector<int> numeric_values = {
+              state1NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus)),
+              GlobalNatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_globallevels.begin(), std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus)),
+              ICUNStatus.empty() ? INT_MAX : std::distance(ICUNlevels.begin(), std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus))
+            };
+            
+            // Find the minimum numeric value
+            int min_value = *std::min_element(numeric_values.begin(), numeric_values.end());
+            
+            // Assign the corresponding status or NA if all are Inf
+            if (min_value == INT_MAX) {
+              data(i, 5) = NA_STRING;
+            } else {
+              // Determine which level system the minimum value belongs to
+              if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 5) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus) != NatureServe_globallevels.end()) {
+                data(i, 5) = NatureServe_globallevels[min_value];
+              } else if (std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus) != ICUNlevels.end()) {
+                data(i, 5) = ICUNlevels[min_value];
+              }
+            }
           }
+          return data;
         }
-      }
-      return(data)
+      ')
+      return final_status(data, NatureServe_statelevels, NatureServe_globallevels, ICUNlevels)
     }
     if (comparison == "least concern") {
       # Initialize the Final_status column
       data$Final_status <- NA
-      
       # Loop through each row
-      for (i in 1:nrow(data)) {
-        # Extract the statuses for the current row
-        state1NatureServeStatus <- as.character(data[i, 3])
-        GlobalNatureServeStatus <- as.character(data[i, 4])
-        ICUNStatus <- as.character(data[i, 5])
-        
-        
-        state1NatureServe_value <- match(state1NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state1NatureServe_value) && state1NatureServe_value > 309) {
-          state1NatureServe_value <- 0
+      cppFunction('
+        NumericVector final_status(Dataframe data, CharacterVector NatureServe_statelevels, CharacterVector NatureServe_globallevels, CharacterVector ICUNlevels) {
+          for (int i = 0; i < data.nrow(); i++) {
+            // Extract the statuses for the current row
+            std::string state1NatureServeStatus = as<std::string>(data(i, 2));
+            std::string GlobalNatureServeStatus = as<std::string>(data(i, 3));
+            std::string ICUNStatus = as<std::string>(data(i, 4));
+            
+            int state1NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus));
+            if (state1NatureServe_value != NA_INTEGER && state1NatureServe_value > 309) {
+              state1NatureServe_value = 0;
+            }
+            
+            int GlobalNatureServe_value = std::distance(NatureServe_globallevels.begin(), std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus));
+            if (GlobalNatureServe_value != NA_INTEGER && GlobalNatureServe_value > 309) {
+              GlobalNatureServe_value = 0;
+            }
+            
+            // Map statuses to numeric values using their respective level systems
+            std::vector<int> numeric_values = {
+              state1NatureServe_value,
+              GlobalNatureServe_value,
+              ICUNStatus.empty() ? 0 : std::distance(ICUNlevels.begin(), std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus))
+            };
+            
+            // Find the maximum numeric value
+            int max_value = *std::max_element(numeric_values.begin(), numeric_values.end());
+            
+            // Determine which level system the maximum value belongs to
+            if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus) != NatureServe_statelevels.end()) {
+              data(i, 5) = NatureServe_statelevels[max_value];
+            } else if (std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus) != NatureServe_globallevels.end()) {
+              data(i, 5) = NatureServe_globallevels[max_value];
+            } else if (std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus) != ICUNlevels.end()) {
+              data(i, 5) = ICUNlevels[max_value];
+            }
+          }
+          return data;
         }
-        
-        GlobalNatureServe_value <- match(GlobalNatureServeStatus, NatureServe_globallevels)
-        if (!is.na(GlobalNatureServe_value) && GlobalNatureServe_value > 309) {
-          GlobalNatureServe_value <- 0
-        }
-        
-        # Map statuses to numeric values using their respective level systems
-        numeric_values <- c(
-          state1NatureServe_value, 
-          GlobalNatureServe_value,
-          ifelse(is.na(ICUNStatus), 0, match(ICUNStatus, ICUNlevels))
-        )
-        
-        # Find the maximum numeric value
-        max_value <- max(numeric_values, na.rm = TRUE)
-        
-        
-        # Determine which level system the maximum value belongs to
-        if (max_value %in% match(state1NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(GlobalNatureServeStatus, NatureServe_globallevels)) {
-          data$Final_status[i] <- NatureServe_globallevels[max_value]
-        } else if (max_value %in% match(ICUNStatus, ICUNlevels)) {
-          data$Final_status[i] <- ICUNlevels[max_value]
-        }
-      } 
-      return(data)
+      ')
+      return final_status(data, NatureServe_statelevels, NatureServe_globallevels, ICUNlevels)
     }
-  }    
-  
+  }
   # for 2 states
   if (!is.null(state2) && is.null(state3) && is.null(state4)) {
     if (comparison == "most concern") {
@@ -132,94 +138,102 @@ comparingstatuses <- function(data, state1 = NULL, state2 = NULL, state3 = NULL,
       data$Final_status <- NA
       
       # Loop through each row
-      for (i in 1:nrow(data)) {
-        # Extract the statuses for the current row
-        state1NatureServeStatus <- as.character(data[i, 3])
-        state2NatureServeStatus <- as.character(data[i, 4])
-        GlobalNatureServeStatus <- as.character(data[i, 5])
-        ICUNStatus <- as.character(data[i, 6])
-        
-        # Map statuses to numeric values using their respective level systems
-        numeric_values <- c(
-          ifelse(is.na(state1NatureServeStatus), Inf, match(state1NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(state2NatureServeStatus), Inf, match(state2NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(GlobalNatureServeStatus), Inf, match(GlobalNatureServeStatus, NatureServe_globallevels)),
-          ifelse(is.na(ICUNStatus), Inf, match(ICUNStatus, ICUNlevels))
-        )
-        
-        # Find the minimum numeric value
-        min_value <- min(numeric_values, na.rm = TRUE)
-        
-        # Assign the corresponding status or NA if all are Inf
-        if (min_value == Inf) {
-          data$Final_status[i] <- NA
-        } else {
-          # Determine which level system the minimum value belongs to
-          if (min_value %in% match(state1NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(state2NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(GlobalNatureServeStatus, NatureServe_globallevels)) {
-            data$Final_status[i] <- NatureServe_globallevels[min_value]
-          } else if (min_value %in% match(ICUNStatus, ICUNlevels)) {
-            data$Final_status[i] <- ICUNlevels[min_value]
+      cppFunction('
+        NumericVector final_status(Dataframe data, CharacterVector NatureServe_statelevels, CharacterVector NatureServe_globallevels, CharacterVector ICUNlevels) {
+          for (int i = 0; i < data.nrow(); i++) {
+            // Extract the statuses for the current row
+            std::string state1NatureServeStatus = as<std::string>(data(i, 3));
+            std::string state2NatureServeStatus = as<std::string>(data(i, 4));
+            std::string GlobalNatureServeStatus = as<std::string>(data(i, 5));
+            std::string ICUNStatus = as<std::string>(data(i, 6));
+            
+            // Map statuses to numeric values using their respective level systems
+            std::vector<int> numeric_values = {
+              state1NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus)),
+              state2NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus)),
+              GlobalNatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_globallevels.begin(), std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus)),
+              ICUNStatus.empty() ? INT_MAX : std::distance(ICUNlevels.begin(), std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus))
+            };
+            
+            // Find the minimum numeric value
+            int min_value = *std::min_element(numeric_values.begin(), numeric_values.end());
+            
+            // Assign the corresponding status or NA if all are Inf
+            if (min_value == INT_MAX) {
+              data(i, 7) = NA_STRING;
+            } else {
+              // Determine which level system the minimum value belongs to
+              if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 7) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 7) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus) != NatureServe_globallevels.end()) {
+                data(i, 7) = NatureServe_globallevels[min_value];
+              } else if (std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus) != ICUNlevels.end()) {
+                data(i, 7) = ICUNlevels[min_value];
+              }
+            }
           }
+          return data;
         }
-      } 
-      return(data)
+      ')
+      return final_status(data, NatureServe_statelevels, NatureServe_globallevels, ICUNlevels)
     }
     if (comparison == "least concern") {         
       # Initialize the Final_status column
       data$Final_status <- NA
       
       # Loop through each row
-      for (i in 1:nrow(data)) {
-        # Extract the statuses for the current row
-        state1NatureServeStatus <- as.character(data[i, 3])
-        state2NatureServeStatus <- as.character(data[i, 4])
-        GlobalNatureServeStatus <- as.character(data[i, 5])
-        ICUNStatus <- as.character(data[i, 6])
-        
-        
-        state1NatureServe_value <- match(state1NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state1NatureServe_value) && state1NatureServe_value > 309) {
-          state1NatureServe_value <- 0
+      cppFunction('
+        NumericVector final_status(Dataframe data, CharacterVector NatureServe_statelevels, CharacterVector NatureServe_globallevels, CharacterVector ICUNlevels) {
+          for (int i = 0; i < data.nrow(); i++) {
+            // Extract the statuses for the current row
+            std::string state1NatureServeStatus = as<std::string>(data(i, 3));
+            std::string state2NatureServeStatus = as<std::string>(data(i, 4));
+            std::string GlobalNatureServeStatus = as<std::string>(data(i, 5));
+            std::string ICUNStatus = as<std::string>(data(i, 6));
+            
+            int state1NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus));
+            if (state1NatureServe_value != NA_INTEGER && state1NatureServe_value > 309) {
+              state1NatureServe_value = 0;
+            }
+            
+            int state2NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus));
+            if (state2NatureServe_value != NA_INTEGER && state2NatureServe_value > 309) {
+              state2NatureServe_value = 0;
+            }
+            
+            int GlobalNatureServe_value = std::distance(NatureServe_globallevels.begin(), std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus));
+            if (GlobalNatureServe_value != NA_INTEGER && GlobalNatureServe_value > 309) {
+              GlobalNatureServe_value = 0;
+            }
+            
+            // Map statuses to numeric values using their respective level systems
+            std::vector<int> numeric_values = {
+              state1NatureServe_value,
+              state2NatureServe_value,
+              GlobalNatureServe_value,
+              ICUNStatus.empty() ? 0 : std::distance(ICUNlevels.begin(), std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus))
+            };
+            
+            // Find the maximum numeric value
+            int max_value = *std::max_element(numeric_values.begin(), numeric_values.end());
+            
+            // Determine which level system the maximum value belongs to
+            if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus) != NatureServe_statelevels.end()) {
+              data(i, 7) = NatureServe_statelevels[max_value];
+            } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus) != NatureServe_statelevels.end()) {
+              data(i, 7) = NatureServe_statelevels[max_value];
+            } else if (std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus) != NatureServe_globallevels.end()) {
+              data(i, 7) = NatureServe_globallevels[max_value];
+            } else if (std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus) != ICUNlevels.end()) {
+              data(i, 7) = ICUNlevels[max_value];
+            }
+          }
+          return data;
         }
-        
-        state2NatureServe_value <- match(state2NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state2NatureServe_value) && state2NatureServe_value > 309) {
-          state2NatureServe_value <- 0
-        }
-        
-        GlobalNatureServe_value <- match(GlobalNatureServeStatus, NatureServe_globallevels)
-        if (!is.na(GlobalNatureServe_value) && GlobalNatureServe_value > 309) {
-          GlobalNatureServe_value <- 0
-        }
-        
-        # Map statuses to numeric values using their respective level systems
-        numeric_values <- c(
-          state1NatureServe_value, 
-          state2NatureServe_value,
-          GlobalNatureServe_value,
-          ifelse(is.na(ICUNStatus), 0, match(ICUNStatus, ICUNlevels))
-        )
-        
-        # Find the maximum numeric value
-        max_value <- max(numeric_values, na.rm = TRUE)
-        
-        
-        # Determine which level system the maximum value belongs to
-        if (max_value %in% match(state1NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(state2NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(GlobalNatureServeStatus, NatureServe_globallevels)) {
-          data$Final_status[i] <- NatureServe_globallevels[max_value]
-        } else if (max_value %in% match(ICUNStatus, ICUNlevels)) {
-          data$Final_status[i] <- ICUNlevels[max_value]
-        }
-      } 
-      return(data)
+      ')
+      return final_status(data, NatureServe_statelevels, NatureServe_globallevels, ICUNlevels)
     }
   }
   
@@ -230,106 +244,114 @@ comparingstatuses <- function(data, state1 = NULL, state2 = NULL, state3 = NULL,
       data$Final_status <- NA
       
       # Loop through each row
-      for (i in 1:nrow(data)) {
-        # Extract the statuses for the current row
-        state1NatureServeStatus <- as.character(data[i, 3])
-        state2NatureServeStatus <- as.character(data[i, 4])
-        state3NatureServeStatus <- as.character(data[i, 5])
-        GlobalNatureServeStatus <- as.character(data[i, 6])
-        ICUNStatus <- as.character(data[i, 7])
-        
-        # Map statuses to numeric values using their respective level systems
-        numeric_values <- c(
-          ifelse(is.na(state1NatureServeStatus), Inf, match(state1NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(state2NatureServeStatus), Inf, match(state2NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(state3NatureServeStatus), Inf, match(state3NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(GlobalNatureServeStatus), Inf, match(GlobalNatureServeStatus, NatureServe_globallevels)),
-          ifelse(is.na(ICUNStatus), Inf, match(ICUNStatus, ICUNlevels))
-        )
-        
-        # Find the minimum numeric value
-        min_value <- min(numeric_values, na.rm = TRUE)
-        
-        # Assign the corresponding status or NA if all are Inf
-        if (min_value == Inf) {
-          data$Final_status[i] <- NA
-        } else {
-          # Determine which level system the minimum value belongs to
-          if (min_value %in% match(state1NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(state2NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(state3NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(GlobalNatureServeStatus, NatureServe_globallevels)) {
-            data$Final_status[i] <- NatureServe_globallevels[min_value]
-          } else if (min_value %in% match(ICUNStatus, ICUNlevels)) {
-            data$Final_status[i] <- ICUNlevels[min_value]
+      cppFunction('
+        NumericVector final_status(Dataframe data, CharacterVector NatureServe_statelevels, CharacterVector NatureServe_globallevels, CharacterVector ICUNlevels) {
+          for (int i = 0; i < data.nrow(); i++) {
+            // Extract the statuses for the current row
+            std::string state1NatureServeStatus = as<std::string>(data(i, 3));
+            std::string state2NatureServeStatus = as<std::string>(data(i, 4));
+            std::string state3NatureServeStatus = as<std::string>(data(i, 5));
+            std::string GlobalNatureServeStatus = as<std::string>(data(i, 6));
+            std::string ICUNStatus = as<std::string>(data(i, 7));
+            
+            // Map statuses to numeric values using their respective level systems
+            std::vector<int> numeric_values = {
+              state1NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus)),
+              state2NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus)),
+              state3NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state3NatureServeStatus)),
+              GlobalNatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_globallevels.begin(), std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus)),
+              ICUNStatus.empty() ? INT_MAX : std::distance(ICUNlevels.begin(), std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus))
+            };
+            
+            // Find the minimum numeric value
+            int min_value = *std::min_element(numeric_values.begin(), numeric_values.end());
+            
+            // Assign the corresponding status or NA if all are Inf
+            if (min_value == INT_MAX) {
+              data(i, 8) = NA_STRING;
+            } else {
+              // Determine which level system the minimum value belongs to
+              if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 8) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 8) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state3NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 8) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus) != NatureServe_globallevels.end()) {
+                data(i, 8) = NatureServe_globallevels[min_value];
+              } else if (std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus) != ICUNlevels.end()) {
+                data(i, 8) = ICUNlevels[min_value];
+              }
+            } 
           }
+          return data;
         }
-      }  
-      return(data)
+      ')
+      return final_status(data, NatureServe_statelevels, NatureServe_globallevels, ICUNlevels)
     }
     if (comparison == "least concern") {
       data$Final_status <- NA
       
       # Loop through each row
-      for (i in 1:nrow(data)) {
-        # Extract the statuses for the current row
-        state1NatureServeStatus <- as.character(data[i, 3])
-        state2NatureServeStatus <- as.character(data[i, 4])
-        state3NatureServeStatus <- as.character(data[i, 5])
-        GlobalNatureServeStatus <- as.character(data[i, 6])
-        ICUNStatus <- as.character(data[i, 7])
-        
-        
-        state1NatureServe_value <- match(state1NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state1NatureServe_value) && state1NatureServe_value > 309) {
-          state1NatureServe_value <- 0
+      cppFunction('
+        NumericVector final_status(Dataframe data, CharacterVector NatureServe_statelevels, CharacterVector NatureServe_globallevels, CharacterVector ICUNlevels) {
+          for (int i = 0; i < data.nrow(); i++) {
+            // Extract the statuses for the current row
+            std::string state1NatureServeStatus = as<std::string>(data(i, 3));
+            std::string state2NatureServeStatus = as<std::string>(data(i, 4));
+            std::string state3NatureServeStatus = as<std::string>(data(i, 5));
+            std::string GlobalNatureServeStatus = as<std::string>(data(i, 6));
+            std::string ICUNStatus = as<std::string>(data(i, 7));
+            
+            int state1NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus));
+            if (state1NatureServe_value != NA_INTEGER && state1NatureServe_value > 309) {
+              state1NatureServe_value = 0;
+            }
+            
+            int state2NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus));
+            if (state2NatureServe_value != NA_INTEGER && state2NatureServe_value > 309) {
+              state2NatureServe_value = 0;
+            }
+            
+            int state3NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state3NatureServeStatus));
+            if (state3NatureServe_value != NA_INTEGER && state3NatureServe_value > 309) {
+              state3NatureServe_value = 0;
+            }
+            
+            int GlobalNatureServe_value = std::distance(NatureServe_globallevels.begin(), std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus));
+            if (GlobalNatureServe_value != NA_INTEGER && GlobalNatureServe_value > 309) {
+              GlobalNatureServe_value = 0;
+            }
+            
+            // Map statuses to numeric values using their respective level systems
+            std::vector<int> numeric_values = {
+              state1NatureServe_value,
+              state2NatureServe_value,
+              state3NatureServe_value,
+              GlobalNatureServe_value,
+              ICUNStatus.empty() ? 0 : std::distance(ICUNlevels.begin(), std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus))
+            };
+            max_value = *std::max_element(numeric_values.begin(), numeric_values.end());
+            if (max_value == INT_MAX) {
+              data(i, 8) = NA_STRING;
+            } else {
+              if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 8) = NatureServe_statelevels[max_value];
+              } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 8) = NatureServe_statelevels[max_value];
+              } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state3NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 8) = NatureServe_statelevels[max_value];
+              } else if (std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus) != NatureServe_globallevels.end()) {
+                data(i, 8) = NatureServe_globallevels[max_value];
+              } else if (std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus) != ICUNlevels.end()) {
+                data(i, 8) = ICUNlevels[max_value];
+              }
+            }
+          }
+          return data;
         }
-        
-        state2NatureServe_value <- match(state2NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state2NatureServe_value) && state2NatureServe_value > 309) {
-          state2NatureServe_value <- 0
-        }
-        
-        state3NatureServe_value <- match(state3NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state3NatureServe_value) && state3NatureServe_value > 309) {
-          state3NatureServe_value <- 0
-        }
-        
-        GlobalNatureServe_value <- match(GlobalNatureServeStatus, NatureServe_globallevels)
-        if (!is.na(GlobalNatureServe_value) && GlobalNatureServe_value > 309) {
-          GlobalNatureServe_value <- 0
-        }
-        
-        # Map statuses to numeric values using their respective level systems
-        numeric_values <- c(
-          state1NatureServe_value, 
-          state2NatureServe_value,
-          state3NatureServe_value,
-          GlobalNatureServe_value,
-          ifelse(is.na(ICUNStatus), 0, match(ICUNStatus, ICUNlevels))
-        )
-        
-        # Find the maximum numeric value
-        max_value <- max(numeric_values, na.rm = TRUE)
-        
-        
-        # Determine which level system the maximum value belongs to
-        if (max_value %in% match(state1NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(state2NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(state3NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(GlobalNatureServeStatus, NatureServe_globallevels)) {
-          data$Final_status[i] <- NatureServe_globallevels[max_value]
-        } else if (max_value %in% match(ICUNStatus, ICUNlevels)) {
-          data$Final_status[i] <- ICUNlevels[max_value]
-        }
-      } 
-      return(data)
+      ')
+      return final_status(data, NatureServe_statelevels, NatureServe_globallevels, ICUNlevels)
     }
   }
   
@@ -340,119 +362,127 @@ comparingstatuses <- function(data, state1 = NULL, state2 = NULL, state3 = NULL,
       data$Final_status <- NA
       
       # Loop through each row
-      for (i in 1:nrow(data)) {
-        # Extract the statuses for the current row
-        state1NatureServeStatus <- as.character(data[i, 3])
-        state2NatureServeStatus <- as.character(data[i, 4])
-        state3NatureServeStatus <- as.character(data[i, 5])
-        state4NatureServeStatus <- as.character(data[i, 6])
-        GlobalNatureServeStatus <- as.character(data[i, 7])
-        ICUNStatus <- as.character(data[i, 8])
-        
-        # Map statuses to numeric values using their respective level systems
-        numeric_values <- c(
-          ifelse(is.na(state1NatureServeStatus), Inf, match(state1NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(state2NatureServeStatus), Inf, match(state2NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(state3NatureServeStatus), Inf, match(state3NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(state4NatureServeStatus), Inf, match(state4NatureServeStatus, NatureServe_statelevels)),
-          ifelse(is.na(GlobalNatureServeStatus), Inf, match(GlobalNatureServeStatus, NatureServe_globallevels)),
-          ifelse(is.na(ICUNStatus), Inf, match(ICUNStatus, ICUNlevels))
-        )
-        
-        # Find the minimum numeric value
-        min_value <- min(numeric_values, na.rm = TRUE)
-        
-        # Assign the corresponding status or NA if all are Inf
-        if (min_value == Inf) {
-          data$Final_status[i] <- NA
-        } else {
-          # Determine which level system the minimum value belongs to
-          if (min_value %in% match(state1NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(state2NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(state3NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(state4NatureServeStatus, NatureServe_statelevels)) {
-            data$Final_status[i] <- NatureServe_statelevels[min_value]
-          } else if (min_value %in% match(GlobalNatureServeStatus, NatureServe_globallevels)) {
-            data$Final_status[i] <- NatureServe_globallevels[min_value]
-          } else if (min_value %in% match(ICUNStatus, ICUNlevels)) {
-            data$Final_status[i] <- ICUNlevels[min_value]
+      cppFunction('
+        NumericVector final_status(Dataframe data, CharacterVector NatureServe_statelevels, CharacterVector NatureServe_globallevels, CharacterVector ICUNlevels) {
+          for (int i = 0; i < data.nrow(); i++) {
+            // Extract the statuses for the current row
+            std::string state1NatureServeStatus = as<std::string>(data(i, 3));
+            std::string state2NatureServeStatus = as<std::string>(data(i, 4));
+            std::string state3NatureServeStatus = as<std::string>(data(i, 5));
+            std::string state4NatureServeStatus = as<std::string>(data(i, 6));
+            std::string GlobalNatureServeStatus = as<std::string>(data(i, 7));
+            std::string ICUNStatus = as<std::string>(data(i, 8));
+            
+            // Map statuses to numeric values using their respective level systems
+            std::vector<int> numeric_values = {
+              state1NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus)),
+              state2NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus)),
+              state3NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state3NatureServeStatus)),
+              state4NatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state4NatureServeStatus)),
+              GlobalNatureServeStatus.empty() ? INT_MAX : std::distance(NatureServe_globallevels.begin(), std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus)),
+              ICUNStatus.empty() ? INT_MAX : std::distance(ICUNlevels.begin(), std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus))
+            };
+            
+            // Find the minimum numeric value
+            int min_value = *std::min_element(numeric_values.begin(), numeric_values.end());
+            
+            // Assign the corresponding status or NA if all are Inf
+            if (min_value == INT_MAX) {
+              data(i, 9) = NA_STRING;
+            } else {
+              // Determine which level system the minimum value belongs to
+              if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 9) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 9) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state3NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 9) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state4NatureServeStatus) != NatureServe_statelevels.end()) {
+                data(i, 9) = NatureServe_statelevels[min_value];
+              } else if (std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus) != NatureServe_globallevels.end()) {
+                data(i, 9) = NatureServe_globallevels[min_value];
+              } else if (std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus) != ICUNlevels.end()) {
+                data(i, 9) = ICUNlevels[min_value];
+              }
+            }
           }
+          return data;
         }
-      }  
-      return(data)
+      ')
+      return final_status(data, NatureServe_statelevels, NatureServe_globallevels, ICUNlevels)
     }  
     if (comparison == "least concern") {
       data$Final_status <- NA
       
       # Loop through each row
-      for (i in 1:nrow(data)) {
-        # Extract the statuses for the current row
-        state1NatureServeStatus <- as.character(data[i, 3])
-        state2NatureServeStatus <- as.character(data[i, 4])
-        state3NatureServeStatus <- as.character(data[i, 5])
-        state3NatureServeStatus <- as.character(data[i, 6])
-        GlobalNatureServeStatus <- as.character(data[i, 7])
-        ICUNStatus <- as.character(data[i, 8])
-        
-        
-        state1NatureServe_value <- match(state1NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state1NatureServe_value) && state1NatureServe_value > 309) {
-          state1NatureServe_value <- 0
+      cppFunction('
+        NumericVector final_status(Dataframe data, CharacterVector NatureServe_statelevels, CharacterVector NatureServe_globallevels, CharacterVector ICUNlevels) {
+          for (int i = 0; i < data.nrow(); i++) {
+            // Extract the statuses for the current row
+            std::string state1NatureServeStatus = as<std::string>(data(i, 3));
+            std::string state2NatureServeStatus = as<std::string>(data(i, 4));
+            std::string state3NatureServeStatus = as<std::string>(data(i, 5));
+            std::string state4NatureServeStatus = as<std::string>(data(i, 6));
+            std::string GlobalNatureServeStatus = as<std::string>(data(i, 7));
+            std::string ICUNStatus = as<std::string>(data(i, 8));
+            
+            int state1NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus));
+            if (state1NatureServe_value != NA_INTEGER && state1NatureServe_value > 309) {
+              state1NatureServe_value = 0;
+            }
+            
+            int state2NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus));
+            if (state2NatureServe_value != NA_INTEGER && state2NatureServe_value > 309) {
+              state2NatureServe_value = 0;
+            }
+            
+            int state3NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state3NatureServeStatus));
+            if (state3NatureServe_value != NA_INTEGER && state3NatureServe_value > 309) {
+              state3NatureServe_value = 0;
+            }
+            
+            int state4NatureServe_value = std::distance(NatureServe_statelevels.begin(), std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state4NatureServeStatus));
+            if (state4NatureServe_value != NA_INTEGER && state4NatureServe_value > 309) {
+              state4NatureServe_value = 0;
+            }
+            
+            int GlobalNatureServe_value = std::distance(NatureServe_globallevels.begin(), std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus));
+            if (GlobalNatureServe_value != NA_INTEGER && GlobalNatureServe_value > 309) {
+              GlobalNatureServe_value = 0;
+            }
+            
+            // Map statuses to numeric values using their respective level systems
+            std::vector<int> numeric_values = {
+              state1NatureServe_value,
+              state2NatureServe_value,
+              state3NatureServe_value,
+              state4NatureServe_value,
+              GlobalNatureServe_value,
+              ICUNStatus.empty() ? 0 : std::distance(ICUNlevels.begin(), std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus))
+            };
+
+            // Find the maximum numeric value
+            int max_value = *std::max_element(numeric_values.begin(), numeric_values.end());
+
+            // Determine which level system the maximum value belongs to
+            if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state1NatureServeStatus) != NatureServe_statelevels.end()) {
+              data(i, 9) = NatureServe_statelevels[max_value];
+            } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state2NatureServeStatus) != NatureServe_statelevels.end()) {
+              data(i, 9) = NatureServe_statelevels[max_value];
+            } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state3NatureServeStatus) != NatureServe_statelevels.end()) {
+              data(i, 9) = NatureServe_statelevels[max_value];
+            } else if (std::find(NatureServe_statelevels.begin(), NatureServe_statelevels.end(), state4NatureServeStatus) != NatureServe_statelevels.end()) {
+              data(i, 9) = NatureServe_statelevels[max_value];
+            } else if (std::find(NatureServe_globallevels.begin(), NatureServe_globallevels.end(), GlobalNatureServeStatus) != NatureServe_globallevels.end()) {
+              data(i, 9) = NatureServe_globallevels[max_value];
+            } else if (std::find(ICUNlevels.begin(), ICUNlevels.end(), ICUNStatus) != ICUNlevels.end()) {
+              data(i, 9) = ICUNlevels[max_value];
+            }
+          }
+          return data;
         }
-        
-        state2NatureServe_value <- match(state2NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state2NatureServe_value) && state2NatureServe_value > 309) {
-          state2NatureServe_value <- 0
-        }
-        
-        state3NatureServe_value <- match(state3NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state3NatureServe_value) && state3NatureServe_value > 309) {
-          state3NatureServe_value <- 0
-        }
-        
-        state4NatureServe_value <- match(state4NatureServeStatus, NatureServe_statelevels)
-        if (!is.na(state4NatureServe_value) && state4NatureServe_value > 309) {
-          state4NatureServe_value <- 0
-        }
-        
-        GlobalNatureServe_value <- match(GlobalNatureServeStatus, NatureServe_globallevels)
-        if (!is.na(GlobalNatureServe_value) && GlobalNatureServe_value > 309) {
-          GlobalNatureServe_value <- 0
-        }
-        
-        # Map statuses to numeric values using their respective level systems
-        numeric_values <- c(
-          state1NatureServe_value, 
-          state2NatureServe_value,
-          state3NatureServe_value,
-          state4NatureServe_value,
-          GlobalNatureServe_value,
-          ifelse(is.na(ICUNStatus), 0, match(ICUNStatus, ICUNlevels))
-        )
-        
-        # Find the maximum numeric value
-        max_value <- max(numeric_values, na.rm = TRUE)
-        
-        
-        # Determine which level system the maximum value belongs to
-        if (max_value %in% match(state1NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(state2NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(state3NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(state4NatureServeStatus, NatureServe_statelevels)) {
-          data$Final_status[i] <- NatureServe_statelevels[max_value]
-        } else if (max_value %in% match(GlobalNatureServeStatus, NatureServe_globallevels)) {
-          data$Final_status[i] <- NatureServe_globallevels[max_value]
-        } else if (max_value %in% match(ICUNStatus, ICUNlevels)) {
-          data$Final_status[i] <- ICUNlevels[max_value]
-        }
-      } 
-      return(data)
+      ')
+      return final_status(data, NatureServe_statelevels, NatureServe_globallevels, ICUNlevels)
     }
   }
 }
