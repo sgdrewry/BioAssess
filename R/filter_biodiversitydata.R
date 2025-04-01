@@ -163,16 +163,17 @@ filter_biodiversitydata <- function(data,
   incertae_sedis_count <- length(incertae_sedis)
   
   if (incertae_sedis_count > 0) {
+    #TODO -- Remove the rows with 'incertae sedis' from the dataset as adding to own dataframe to save (loop through and remove and add to new dataframe)
     incertae_sedis_rows <- clean_coordinates_data [incertae_sedis, ]
     write.csv(incertae_sedis_rows, output_incertae_file, row.names = FALSE)
     message(incertae_sedis_count, " 'incertae sedis' records found and saved to: ", output_incertae_file)
     
     # Remove these rows from the dataset
-    clean_coordinates_noIS_data  <- clean_coordinates_data [-incertae_sedis, ]
+    
   } else {
     message("No 'incertae sedis' records found.")
   }
-  
+  clean_coordinates_noIS_data  <- clean_coordinates_data [-incertae_sedis, ]
   # Step 4: Flag records based on coordinate_precision, record_basis, and .summary
   
   # Flag records where any of the conditions are not met
